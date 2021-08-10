@@ -1,0 +1,292 @@
+$configurationData = @{
+    AllNodes = @(
+        @{
+            NodeName = 'localhost'
+            PSDscAllowPlainTextPassword = $true
+            PSDscAllowDomainUser = $true
+            VCenters = @(
+                @{
+                    Server = 'vcsa01.corp.local'
+                    VCUser = 'administrator@vsphere.local'
+                    VMHUser = 'root'
+                    Password = 'VMware1!'
+                    VMHost = @('esx01.corp.local', 'esx02.corp.local', 'esx03.corp.local')
+                    VMFolder = @('Management', 'Production', 'Development')
+                }
+            )
+        }
+    )
+}
+ 
+Configuration vCenter_Config {
+    Import-DscResource -ModuleName VMware.vSphereDSC
+ 
+    Node localhost {
+        foreach ($vCenter in $AllNodes.VCenters) {
+            $Server = $vCenter.Server
+            $VCUser = $vCenter.VCUser
+            $VMHUser = $vCenter.VMHUser
+            $Password = $vCenter.Password | ConvertTo-SecureString -asPlainText -Force
+            $VcCreds = New-Object System.Management.Automation.PSCredential($VCUser, $Password)
+            $VmhCreds = New-Object System.Management.Automation.PSCredential($VMHUser, $Password)
+ 
+            Datacenter "PoShDSC_DC" {
+                Server = $Server
+                Credential = $VcCreds
+                Name = 'PoShDSC'    
+                Location = [string]::Empty
+                Ensure = 'Present'
+            }
+ 
+            Cluster "Production_$($Server)" {
+                Server = $Server
+                Credential = $VcCreds
+                Name = 'Production' 
+                Location = [string]::Empty
+                DatacenterName = 'PoShDSC'
+                DatacenterLocation = [string]::Empty
+                Ensure = 'Present'
+                HAEnabled = $false
+                DrsEnabled = $true
+                DrsAutomationLevel = 'FullyAutomated'
+                DrsMigrationThreshold = 5
+                DrsDistribution = 0
+                MemoryLoadBalancing = 100
+                CPUOverCommitment = 500
+                DependsOn = "[Datacenter]PoShDSC_DC"
+            }
+ 
+            foreach ($vmh in $vCenter.VMHost) {
+                $vmhName = $vmh.split('.')[0]
+ 
+                vCenterVMHost "vCenterVMHost_$($vmhName)" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = $vmh 
+                    Location = 'Production'
+                    DatacenterName = 'PoShDSC'
+                    DatacenterLocation = ''
+                    Ensure = 'Present'
+                    VMHostCredential = $VmhCreds
+                    ResourcePoolLocation = '/'
+                    Port = 443
+                    Force = $true
+                    DependsOn = "[Cluster]Production_$($Server)"
+                }
+ 
+                VMHostScsiLun "VMHostScsiLun_$($vmhName)_mpx.vmhba0C0T0L0" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh
+                    CanonicalName = 'mpx.vmhba0:C0:T0:L0'
+                    BlocksToSwitchPath = 0
+                    CommandsToSwitchPath = 0
+                    IsLocal = $true
+                    IsSsd = $false
+                    MultipathPolicy = 'Fixed'
+                    PreferredScsiLunPathName = 'vmhba0:C0:T0:L0'
+                }
+    
+                VMHostScsiLunPath "VMHostScsiLunPath_$($vmhName)_vmhba0:C0:T0:L0" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh
+                    Name = 'vmhba0:C0:T0:L0'
+                    ScsiLunCanonicalName = 'mpx.vmhba0:C0:T0:L0'
+                    Active = $true
+                    Preferred = $true
+                    DependsOn = "[VMHostScsiLun]VMHostScsiLun_$($vmhName)_mpx.vmhba0C0T0L0"
+                }
+    
+                VmfsDatastore "VmfsDatastore_$($vmhName)_LocalDatastore" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh
+                    Ensure = 'Present'
+                    Name = "Local Datastore - $($vmhName)"
+                    Path = 'mpx.vmhba0:C0:T0:L0'
+                    BlockSizeMB = 1
+                    CongestionThresholdMillisecond = 30
+                    FileSystemVersion = '5'
+                    StorageIOControlEnabled = $false
+                    DependsOn = "[VMHostScsiLun]VMHostScsiLun_$($vmhName)_mpx.vmhba0C0T0L0"
+                }
+ 
+                VMHostDnsSettings "VMHostDnsSettings_$($vmhName)" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = $vmh 
+                    Dhcp = $false
+                    DomainName = 'corp.local'
+                    HostName = $vmhName
+                    Address = @('192.168.110.10')
+                    Ipv6VirtualNicDevice = ''
+                    SearchDomain = @('corp.local')
+                    VirtualNicDevice = ''
+                }
+ 
+                VMHostNtpSettings "VMHostNtpSettings_$($vmhName)" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = $vmh 
+                    NtpServer = @('192.168.110.10')
+                    NtpServicePolicy = 'Automatic'
+                }
+ 
+                VMHostService "VMHostService_TSM-SSH_$($vmhName)" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = $vmh 
+                    Key = 'TSM-SSH'
+                    Policy = 'On'
+                    Running = $true
+                }
+ 
+                VMHostPhysicalNic "VMHostPhysicalNic_$($vmhName)_vmnic0" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'vmnic0'
+                    BitRatePerSecMb = 10000
+                    Duplex = 'Full'
+                }
+    
+                VMHostPhysicalNic "VMHostPhysicalNic_$($vmhName)_vmnic1" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'vmnic1'
+                    BitRatePerSecMb = 10000
+                    Duplex = 'Full'
+                }
+ 
+                StandardSwitch "StandardSwitch_$($vmhName)_vSwitch0" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'vSwitch0'
+                    Ensure = 'Present'
+                    Mtu = 1500
+                    NicDevice = @('vmnic0', 'vmnic1')
+                    BeaconInterval = 1
+                    LinkDiscoveryProtocolType = 'Unset'
+                    LinkDiscoveryProtocolOperation = 'Unset'
+                    AllowPromiscuous = $false
+                    ForgedTransmits = $true
+                    MacChanges = $true
+                    Enabled = $false
+                    CheckBeacon = $false
+                    ActiveNic = @('vmnic0', 'vmnic1')
+                    StandbyNic = @()
+                    NotifySwitches = $true
+                    Policy = 'Loadbalance_srcid'
+                    RollingOrder = $false
+                    DependsOn = "[VMHostPhysicalNic]VMHostPhysicalNic_$($vmhName)_vmnic0", "[VMHostPhysicalNic]VMHostPhysicalNic_$($vmhName)_vmnic1"
+                }
+    
+                StandardPortGroup "StandardPortGroup_$($vmhName)_Management" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'Management'
+                    VssName = 'vSwitch0'
+                    Ensure = 'Present'
+                    VLanId = 0
+                    LoadBalancingPolicy = 'Unset'
+                    ActiveNic = @('vmnic0')
+                    StandbyNic = @()
+                    UnusedNic = @('vmnic1')
+                    NetworkFailoverDetectionPolicy = 'Unset'
+                    DependsOn = "[StandardSwitch]StandardSwitch_$($vmhName)_vSwitch0"
+                }
+    
+                StandardPortGroup "StandardPortGroup_$($vmhName)_Storage" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'Storage'
+                    VssName = 'vSwitch0'
+                    Ensure = 'Present'
+                    VLanId = 1700
+                    LoadBalancingPolicy = 'Unset'
+                    ActiveNic = @('vmnic1')
+                    StandbyNic = @()
+                    UnusedNic = @('vmnic0')
+                    NetworkFailoverDetectionPolicy = 'Unset'
+                    DependsOn = "[StandardSwitch]StandardSwitch_$($vmhName)_vSwitch0"
+                }
+                
+                StandardPortGroup "StandardPortGroup_$($vmhName)_VM Network" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    VMHostName = $vmh   
+                    Name = 'VM Network'
+                    VssName = 'vSwitch0'
+                    Ensure = 'Present'
+                    VLanId = 1731
+                    LoadBalancingPolicy = 'Unset'
+                    ActiveNic = @('vmnic0', 'vmnic1')
+                    StandbyNic = @()
+                    UnusedNic = @()
+                    NetworkFailoverDetectionPolicy = 'Unset'
+                    DependsOn = "[StandardSwitch]StandardSwitch_$($vmhName)_vSwitch0"
+                }
+ 
+            }
+ 
+            foreach ($folder in $vCenter.VMFolder) {
+ 
+                Folder "Folder_$($folder)" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = $folder  
+                    Location = ''
+                    DatacenterName = 'PoShDSC'
+                    DatacenterLocation = ''
+                    Ensure = 'Present'
+                    FolderType = 'VM'
+                    DependsOn = "[Datacenter]PoShDSC_DC"
+                }
+ 
+                Folder "Folder_$($folder)_Windows" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = 'Windows'    
+                    Location = $folder
+                    DatacenterName = 'PoShDSC'
+                    DatacenterLocation = ''
+                    Ensure = 'Present'
+                    FolderType = 'VM'
+                    DependsOn = "[Folder]Folder_$($folder)"
+                }
+        
+                Folder "Folder_$($folder)_Linux" {
+                    Server = $Server
+                    Credential = $VcCreds
+                    Name = 'Linux'  
+                    Location = $folder
+                    DatacenterName = 'PoShDSC'
+                    DatacenterLocation = ''
+                    Ensure = 'Present'
+                    FolderType = 'VM'
+                    DependsOn = "[Folder]Folder_$($folder)"
+                }
+ 
+            }
+ 
+            Folder Folder_Management_VMware {
+                Server = $Server
+                Credential = $VcCreds
+                Name = 'VMware' 
+                Location = 'Management'
+                DatacenterName = 'PoShDSC'
+                DatacenterLocation = ''
+                Ensure = 'Present'
+                FolderType = 'VM'
+                DependsOn = "[Folder]Folder_Management"
+            }
+        }
+    }
+}
+ 
+vCenter_Config -ConfigurationData $configurationData
