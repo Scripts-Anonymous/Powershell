@@ -1,0 +1,3 @@
+[submodule "VMware/dscr-for-vmware"]
+	path = VMware/dscr-for-vmware
+	url = https://github.com/vmware/dscr-for-vmware.git
