@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation.  All rights reserved. 
 # For personal use only.  Provided AS IS and WITH ALL FAULTS.
- 
+# https://knowledgebase.paloaltonetworks.com/KCSArticleDetail?id=kA10g000000ClcsCAC
 # Set-WmiNamespaceSecurity.ps1
 # Example: Set-WmiNamespaceSecurity root/cimv2 add steve Enable,RemoteAccess
  
