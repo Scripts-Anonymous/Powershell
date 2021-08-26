@@ -46,7 +46,7 @@ param(
     [Bool]$RefreshToken
 )
 
-# Variables (if you dont use the parameters)
+# Variables
 $URL="https://localhost:8080/auth/realms/stigman"
 $Client_ID="stig-manager"
 $Client_Secret=""
