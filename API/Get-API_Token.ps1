@@ -36,7 +36,7 @@
 #>
 
 param(
-    [parameter(Mandatory=$False]
+    [parameter(Mandatory=$False)]
     [String]$URL,
     [parameter(Mandatory=$False)]
     [String]$Client_ID,
@@ -51,7 +51,7 @@ $URL="https://localhost:8080/auth/realms/stigman"
 $Client_ID="stig-manager"
 $Client_Secret=""
 
-if (((Get-Date -UFormat %s) -gt $global:AccessTimer) AND ((Get-Date -UFormat %s) -lt $global:ExpiredTimer)){
+if (((Get-Date -UFormat %s) -gt $global:AccessTimer) -AND ((Get-Date -UFormat %s) -lt $global:ExpiredTimer)){
     #Refresh Access Token
     $URI=$URL+"/protocol/openid-connect/token"
     $body=@{
@@ -81,5 +81,5 @@ else {
     $global:AccessToken=($Results.access_token) | ConvertTo-SecureString - AsPlainText -Force
     $global:RefreshToken=($Results.refresh_token) | ConvertTo-SecureString - AsPlainText -Force
     $global:AccessTimer=(Get-Date -UFormat %s)+($Results.expires)
-    $global:ExpiredTimer)=[int](Get-Date -UFormat %s)+[int]64800
+    $global:ExpiredTimer=[int](Get-Date -UFormat %s)+[int]64800
 }
