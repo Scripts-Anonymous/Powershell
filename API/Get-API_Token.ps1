@@ -50,23 +50,14 @@ param(
 $URL="https://localhost:8080/auth/realms/stigman"
 $Client_ID="stig-manager"
 $Client_Secret=""
+.00000
 
-if (((Get-Date -UFormat %s) -gt $global:AccessTimer) -AND ((Get-Date -UFormat %s) -lt $global:ExpiredTimer)){
-    #Refresh Access Token
-    $URI=$URL+"/protocol/openid-connect/token"
-    $body=@{
-        grant_type='refresh_token'
-        refresh_token=$global:RefreshToken
-        client_id=$Client_ID
-        client_secret=$Client_Secret
-    }
-    $Result=Invoke-RestMethod -Method POST -URI $URI -ContentType "application/x-www-form-urlencoded" -Body $Body -Credentials $Creds    
-    $global:AccessToken=($Results.access_token) | ConvertTo-SecureString - AsPlainText -Force
-    $global:RefreshToken=($Results.refresh_token) | ConvertTo-SecureString - AsPlainText -Force
-    $global:AccessTimer=(Get-Date -UFormat %s)+($Results.expires)
-}
-else {
-    $Creds=Get-credentials
+
+
+
+If ($global:AccessTimer -eq $null){
+    #Get Access Token
+    $Creds=Get-Credential
     $Username=$Creds.Username
     $Password=$Creds.GetNetworkCredential().Password
     $URI=$URL+"/protocol/openid-connect/token"
@@ -77,9 +68,23 @@ else {
         client_id=$Client_ID
         client_secret=$Client_Secret
     }
-    $Result=Invoke-RestMethod -Method POST -URI $URI -ContentType "application/x-www-form-urlencoded" -Body $Body -Credentials $Creds
-    $global:AccessToken=($Results.access_token) | ConvertTo-SecureString - AsPlainText -Force
-    $global:RefreshToken=($Results.refresh_token) | ConvertTo-SecureString - AsPlainText -Force
-    $global:AccessTimer=(Get-Date -UFormat %s)+($Results.expires)
+    $Results=Invoke-RestMethod -Method POST -URI $URI -ContentType "application/x-www-form-urlencoded" -Body $Body -Credential $Creds
+    $global:AccessToken=($Results.access_token) | ConvertTo-SecureString -AsPlainText -Force
+    $global:RefreshToken=($Results.refresh_token) | ConvertTo-SecureString -AsPlainText -Force
+    $global:AccessTimer=[int](Get-Date -UFormat %s)+[int]($Results.expires)
     $global:ExpiredTimer=[int](Get-Date -UFormat %s)+[int]64800
+}
+Else{
+    #Refresh Access Token
+    $URI=$URL+"/protocol/openid-connect/token"
+    $body=@{
+        grant_type='refresh_token'
+        refresh_token=$global:RefreshToken
+        client_id=$Client_ID
+        client_secret=$Client_Secret
+    }
+    $Results=Invoke-RestMethod -Method POST -URI $URI -ContentType "application/x-www-form-urlencoded" -Body $Body -Credential $Creds    
+    $global:AccessToken=($Results.access_token) | ConvertTo-SecureString -AsPlainText -Force
+    $global:RefreshToken=($Results.refresh_token) | ConvertTo-SecureString -AsPlainText -Force
+    $global:AccessTimer=[int](Get-Date -UFormat %s)+[int]($Results.expires)
 }
