@@ -1,5 +1,11 @@
+<# Percent-Migrated
+    Author: 
+    Jeff Allen
+    im@jeffreyallen.tech
 # Deploy Windows Server 2008 or higher in vCenter
 # https://metisgroep.nl/blog/powercli-deploy-and-customize-a-vm-vcenter/
+#>
+
 #### USER DEFINED VARIABLES ############################################################################################
 $Domain = ""              #AD Domain to join
 $vCenterInstance = ""     #vCenter to deploy VM
