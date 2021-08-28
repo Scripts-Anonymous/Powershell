@@ -3,8 +3,7 @@
 
 
     .AUTHOR
-    Jeff Allen
-    im@jeffreyallen.tech
+    
 
     .SYNOPSIS
     
