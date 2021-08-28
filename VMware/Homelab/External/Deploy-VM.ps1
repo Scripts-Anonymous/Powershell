@@ -31,7 +31,7 @@ Function Check-CustomizationStarted([string] $VM)
 	while($i -gt 0)
 	{
 		$vmEvents = Get-VIEvent -Entity $VM
-		$startedEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationStartedEvent" }
+		$startedEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationStartedEvent" }
 		if ($startedEvent)
 		{
             Write-Host  "Customization for VM $VM has started" 
@@ -54,8 +54,8 @@ Function Check-CustomizatonFinished([string] $VM)
 	while($true)
 	{
 		$vmEvents = Get-VIEvent -Entity $VM
-		$SucceededEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationSucceeded" }
-        $FailureEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationFailed" }
+		$SucceededEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationSucceeded" }
+        $FailureEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationFailed" }
 		if ($FailureEvent -or ($i -eq 0))
 		{
 			Write-Warning  "Customization of VM $VM failed" 
@@ -101,7 +101,7 @@ Function Test-IP([string] $IP)
 }
 
 #### USER INTERACTIONS ##############################################################################################
-cls
+Clear-Host
 Write-host "Deploy Windows server" -foregroundcolor red
 $Hostname = Read-Host -Prompt "Hostname"
 If ($Hostname.Length -gt 15) {write-Host -ForegroundColor Red "$Hostname is an invalid hostname"; break}
