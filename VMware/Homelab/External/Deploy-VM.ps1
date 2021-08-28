@@ -24,7 +24,7 @@ $GW = ""                  #Gateway to use for VM
 $IP_DNS = ""              #IP address DNS server to use
 
 ### FUNCTION DEFINITIONS ################################################################################################
-Function Check-CustomizationStarted([string] $VM)
+Function Show-CustomizationStarted([string] $VM)
 {
     Write-Host "Verifying that Customization for VM $VM has started"
     $i=60 #time-out of 5 min
@@ -47,7 +47,7 @@ Function Check-CustomizationStarted([string] $VM)
     return $false
 }
 
-Function Check-CustomizatonFinished([string] $VM)
+Function Show-CustomizatonFinished([string] $VM)
 {
     Write-Host  "Verifying that Customization for VM $VM has finished" 
     $i = 60 #time-out of 5 min
@@ -149,7 +149,7 @@ Get-VM $Hostname | Get-HardDisk | Where-Object {$_.Name -eq "Hard Disk 1"} | Set
 Write-Host "Virtual Machine $Hostname Deployed. Powering On" 
 Start-VM -VM $Hostname | Out-Null
 
-if (-not (Check-CustomizationStarted $Hostname)) { break }; if (-not (Check-CustomizatonFinished $Hostname)) { break }
+if (-not (Show-CustomizationStarted $Hostname)) { break }; if (-not (Show-CustomizatonFinished $Hostname)) { break }
 
 foreach ($script in $scripts)
 {
