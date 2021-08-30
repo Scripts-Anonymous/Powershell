@@ -32,9 +32,23 @@
     PS> .\
 
 #>
+#region 
+#Variables
+$VIServer=
+$OSCustomization=
+$ServerName=
+$DomainCredentials=(Get-Credential)
+$Domain=
+$AdminCredentials=(Read-Host -AsSecureString)
+
+
+#endregion
+
+#Requires -Modules VMware.PowerCLI
+Import-Module VMware.PowerCLI
 
 
 
 
 
-New-OSCustomizationSpec -Name 'WindowsServer2016' -FullName 'TestName' -OrgName 'MyCompany' -OSType Windows -ChangeSid -AdminPassword (Read-Host -AsSecureString) -Domain 'NTDOMAIN' -TimeZone 035 -DomainCredentials (Get-Credential) -ProductKey '5555-7777-3333-2222' -AutoLogonCount 1
+New-OSCustomizationSpec -OSCustomizationSpec "$OSCustomization" -ChangeSid -AdminPassword $AdminCredentials -Domain $Domain -TimeZone 035 -DomainCredentials (Get-Credential) -AutoLogonCount 1
