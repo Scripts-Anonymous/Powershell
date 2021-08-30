@@ -1,0 +1,22 @@
+XX-D-T1-DAWs
+XX-D-T1-Servers
+XX-G-T1-Admins
+XX-G-T1-PrivilegedAccounts (URA)
+XX-G-T1-AppAdmins (URA)
+XX-G-T1-GPOTesting
+XX-G-T1-ServerAdmins (URA)
+XX-U-T1-BitlockerRecoveryDAWs
+XX-U-T1-BitlockerRecoveryServers
+XX-U-T1-DAWAdmins
+XX-U-T1-DBAdmins
+XX-U-T1-DFSAdmins
+XX-U-T1-DHCPAuthorizers
+XX-U-T1-LAPSPwdRecoveryDAWs
+XX-U-T1-LAPSPwdRecoveryServers
+XX-U-T1-MMSA
+XX-U-T1-MMSA-Admins
+XX-U-T1-NetworkAdmins
+XX-U-T1-ServerAdminL
+XX-U-T1-ServerAdminW
+XX-U-T1-ServiceAccounts
+XX-U-T1-VirtualiationAdmins
