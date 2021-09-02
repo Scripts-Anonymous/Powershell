@@ -1,7 +1,7 @@
 <# API.psm1
     Author:
     Jeff Allen
-    https://github.com/Scripts-Anonymous
+    https://github.com/Scripts-Anonymous/Powershell/tree/main/API
 #>
 Function Get-APIToken {
 <#
