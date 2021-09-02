@@ -19,11 +19,12 @@ Function Get-APIToken {
     Will provide an Access and Refresh token.
 
 #>
-    #Function Body
-        # User Variables
+    # User Variables
     $URL="https://localhost:8080/auth/realms/stigman"
     $Client_ID="stig-manager"
     $Client_Secret=""
+    
+    #Script Variables
     $URI=$URL+"/protocol/openid-connect/token"
     
     If(!($global:RefreshToken)){
