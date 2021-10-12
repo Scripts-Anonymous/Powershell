@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "ms-vscode.powershell",
-        "github.vscode-pull-request-github"
+        "github.vscode-pull-request-github",
+        "janisdd.vscode-edit-csv"
     ]
 }

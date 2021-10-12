@@ -1,0 +1,24 @@
+XX-D-T2-DAWs
+XX-D-T2-Workstations
+XX-G-T2-PrivilegedAccounts (URA)
+XX-G-T2-WorkstationOperators
+XX-U-T2-BitlockerRecoveryDAWs
+XX-U-T2-BitlockerRecoveryWorkstations
+XX-U-T2-DAWManagement
+XX-U-T2-WorkstationManagement
+XX-U-T2-DAWAdmins
+XX-U-T2-DesktopSupportW
+XX-U-T2-HelpdeskAdmins
+XX-U-T2-LabBitlockerRecoveryDAWs
+XX-U-T2-LabBitlockerRecoveryServers
+XX-U-T2-LabBitlockerRecoveryWorkstations
+XX-U-T2-LabDAWSupport
+XX-U-T2-LabLAPSPwdRecoveryDAWs
+XX-U-T2-LabLAPSPwdRecoveryServers
+XX-U-T2-LabLAPSPwdRecoveryWorkstations
+XX-U-T2-LabServerSupport
+XX-U-T2-LabWorkstationSupport
+XX-U-T2-LAPSPwdRecoveryDAWs
+XX-U-T2-LAPSPwdRecoveryWorkstations
+XX-U-T2-WorkstationAdminW
+XX-U-T2-WorkstationAuditors
