@@ -24,14 +24,14 @@ $GW = ""                  #Gateway to use for VM
 $IP_DNS = ""              #IP address DNS server to use
 
 ### FUNCTION DEFINITIONS ################################################################################################
-Function Check-CustomizationStarted([string] $VM)
+Function Update-CustomizationStarted([string] $VM)
 {
     Write-Host "Verifying that Customization for VM $VM has started"
     $i=60 #time-out of 5 min
 	while($i -gt 0)
 	{
 		$vmEvents = Get-VIEvent -Entity $VM
-		$startedEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationStartedEvent" }
+		$startedEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationStartedEvent" }
 		if ($startedEvent)
 		{
             Write-Host  "Customization for VM $VM has started" 
@@ -47,15 +47,15 @@ Function Check-CustomizationStarted([string] $VM)
     return $false
 }
 
-Function Check-CustomizatonFinished([string] $VM)
+Function Update-CustomizatonFinished([string] $VM)
 {
     Write-Host  "Verifying that Customization for VM $VM has finished" 
     $i = 60 #time-out of 5 min
 	while($true)
 	{
 		$vmEvents = Get-VIEvent -Entity $VM
-		$SucceededEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationSucceeded" }
-        $FailureEvent = $vmEvents | Where { $_.GetType().Name -eq "CustomizationFailed" }
+		$SucceededEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationSucceeded" }
+        $FailureEvent = $vmEvents | Where-Object { $_.GetType().Name -eq "CustomizationFailed" }
 		if ($FailureEvent -or ($i -eq 0))
 		{
 			Write-Warning  "Customization of VM $VM failed" 
@@ -101,7 +101,7 @@ Function Test-IP([string] $IP)
 }
 
 #### USER INTERACTIONS ##############################################################################################
-cls
+Clear-Host
 Write-host "Deploy Windows server" -foregroundcolor red
 $Hostname = Read-Host -Prompt "Hostname"
 If ($Hostname.Length -gt 15) {write-Host -ForegroundColor Red "$Hostname is an invalid hostname"; break}
