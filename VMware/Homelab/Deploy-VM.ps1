@@ -149,7 +149,7 @@ Get-VM $Hostname | Get-HardDisk | Where-Object {$_.Name -eq "Hard Disk 1"} | Set
 Write-Host "Virtual Machine $Hostname Deployed. Powering On" 
 Start-VM -VM $Hostname | Out-Null
 
-if (-not (Check-CustomizationStarted $Hostname)) { break }; if (-not (Check-CustomizatonFinished $Hostname)) { break }
+if (-not (Update-CustomizationStarted $Hostname)) { break }; if (-not (Update-CustomizatonFinished $Hostname)) { break }
 
 foreach ($script in $scripts)
 {
