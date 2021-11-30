@@ -1,0 +1,9 @@
+Tag_Name,vCenterServer,$Cluster,VMTemplate,Location,$DataStore,$DiskStorageFormat,NetworkName,VM_Name,VM_Memory,VM_CPU,VM_DiskCapacity,Domain,IP_Address,SubnetLength,GW,IP_DNS
+Domain Controller,
+Domain Controller,
+Application,
+Application,
+SQL,
+SQL,
+Remdiatation,
+Web,

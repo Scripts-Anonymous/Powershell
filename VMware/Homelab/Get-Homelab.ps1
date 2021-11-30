@@ -1,29 +1,39 @@
-<# Percent-Migrated
+<# Deploy-VM
     Author: 
     Jeff Allen
     im@jeffreyallen.tech
-# Deploy Windows Server 2008 or higher in vCenter
-# https://metisgroep.nl/blog/powercli-deploy-and-customize-a-vm-vcenter/
+# Deploy Windows Server in vCenter
+# Original script from https://metisgroep.nl/blog/powercli-deploy-and-customize-a-vm-vcenter/. Modified by me.
 #>
 
-#### USER DEFINED VARIABLES ############################################################################################
-$Domain = ""              #AD Domain to join
-$vCenterInstance = ""     #vCenter to deploy VM
-$Cluster = ""             #vCenter cluster to deploy VM
-$VMTemplate = ""          #vCenter template to deploy VM
-$CustomSpec = ""          #vCenter customization to use for VM
-$Location = ""            #Folderlocation in vCenter for VM
-$DataStore = ""           #Datastore in vCenter to use for VM
-$DiskStorageFormat = ""   #Diskformtat to use (Thin / Thick) for VM
-$NetworkName = ""         #Portgroup to use for VM
-$Memory =                 #Memory of VM In GB
-$CPU =                    #number of vCPUs of VM
-$DiskCapacity =           #Disksize of VM in GB
-$SubnetLength =           #Subnetlength IP address to use (24 means /24 or 255.255.255.0) for VM
-$GW = ""                  #Gateway to use for VM
-$IP_DNS = ""              #IP address DNS server to use
+#### USER DEFINED VARIABLES ###########################################################################################
+# VMware Variables
+$vCenterServer = ''     #vCenter to deploy VM
+$Cluster = ''             #vCenter cluster to deploy VM
+$VMTemplate = ''          #vCenter template to deploy VM
+$CustomSpec = ''          #vCenter customization to use for VM
+$Location = ''            #Folderlocation in vCenter for VM
+$DataStore = ''           #Datastore in vCenter to use for VM
+$DiskStorageFormat = ''   #Diskformtat to use (Thin / Thick) for VM
+$NetworkName = ''         #Portgroup to use for VM
 
-### FUNCTION DEFINITIONS ################################################################################################
+# VM Variables
+$VM_Name = ''
+$VM_Memory = ''                #Memory of VM In GB
+$VM_CPU = ''                   #number of vCPUs of VM
+$VM_DiskCapacity = ''          #Disksize of VM in GB
+
+# Windows Variables
+$Domain = ''                #AD Domain to join
+$IP_Address = ''            #VM IP
+$SubnetLength = ''          #Subnetlength IP address to use (24 means /24 or 255.255.255.0) for VM
+$GW = ''                    #Gateway to use for VM
+$IP_DNS = ''                #IP address DNS server to use
+
+# VMware Tags
+$Category_Name = "Infra-As-Code"
+
+### FUNCTION DEFINITIONS ##############################################################################################
 Function Update-CustomizationStarted([string] $VM)
 {
     Write-Host "Verifying that Customization for VM $VM has started"
@@ -99,6 +109,14 @@ Function Test-IP([string] $IP)
 {
   if (-not ($IP) -or (([bool]($IP -as [IPADDRESS])))) { return $true} else {return $false}
 }
+Function New-VMwareTags {
+    New-TagCategory -Name $Category_Name
+    $CSV_Unique_Tag_Name = $CSV | Sort Tag_Name -Unique
+    $Tag_Names = @($CSV_Unique_Tag_Name.Tag_Name)
+    ForEach ($Tag_Name in $Tag_Names){
+        New-Tag -Name $Tag_Name -Category $Category_Name
+    }
+}
 
 #### USER INTERACTIONS ##############################################################################################
 Clear-Host
@@ -109,7 +127,10 @@ $IP = Read-Host -Prompt "IP Address (press ENTER for DHCP)"
 If (-not (Test-IP $IP)) {write-Host -ForegroundColor Red "$IP is an invalid address"; break}
 $JoinDomainYN = Read-Host "Join Domain $Domain (Y/N)"
 
-### READ CREDENTIALS ########################################################################################################
+# Create VMware Tags
+New-VMwareTags
+
+### READ CREDENTIALS ####################################################################################################
 Get-Content credentials.txt | Foreach-Object{
    $var = $_.Split('=')
    Set-Variable -Name $var[0].trim('" ') -Value $var[1].trim('" ')
@@ -120,7 +141,7 @@ $VMLocalCredential = New-Object -TypeName System.Management.Automation.PSCredent
 
 ### CONNECT TO VCENTER ##############################################################################################
 Get-Module -ListAvailable VMware* | Import-Module | Out-Null
-Connect-VIServer -Server $vCenterInstance -User $vCenterUser -Password $vCenterPass -WarningAction SilentlyContinue
+Connect-VIServer -Server $vCenterServer -User $vCenterUser -Password $vCenterPass -WarningAction SilentlyContinue
 $SourceVMTemplate = Get-Template -Name $VMTemplate
 $SourceCustomSpec = Get-OSCustomizationSpec -Name $CustomSpec
 
@@ -140,8 +161,8 @@ Add-Script 'Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Termi
 
 ### DEPLOY VM ###############################################################################################################################################################
 Write-Host "Deploying Virtual Machine with Name: [$Hostname] using Template: [$SourceVMTemplate] and Customization Specification: [$SourceCustomSpec] on cluster: [$cluster]" 
-New-VM -Name $Hostname -Template $SourceVMTemplate -ResourcePool $cluster -OSCustomizationSpec $SourceCustomSpec -Location $Location `
-  -Datastore $Datastore -DiskStorageFormat $DiskStorageFormat | Out-Null
+New-VM -Name $Hostname -Template $SourceVMTemplate -ResourcePool $cluster -OSCustomizationSpec $SourceCustomSpec -Location $Location -Datastore $Datastore -DiskStorageFormat $DiskStorageFormat | Out-Null
+New-TagAssignment -Entity $Hostname -Tag $Tag_Name
 Get-VM $Hostname | Get-NetworkAdapter | Set-NetworkAdapter -Portgroup $NetworkName -confirm:$false | Out-Null
 Set-VM -VM $Hostname -NumCpu $CPU -MemoryGB $Memory -Confirm:$false | Out-Null
 Get-VM $Hostname | Get-HardDisk | Where-Object {$_.Name -eq "Hard Disk 1"} | Set-HardDisk -CapacityGB $DiskCapacity -Confirm:$false | Out-Null
