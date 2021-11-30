@@ -3,37 +3,21 @@
     Jeff Allen
     im@jeffreyallen.tech
 # Deploy Windows Server in vCenter
-# Original script from https://metisgroep.nl/blog/powercli-deploy-and-customize-a-vm-vcenter/. Modified by me.
+# Original script from https://metisgroep.nl/blog/powercli-deploy-and-customize-a-vm-vcenter/. Modified to fit infrastructure as code.
 #>
+#Requires -Modules VMware.PowerCLI
 
-#### USER DEFINED VARIABLES ###########################################################################################
-# VMware Variables
-$vCenterServer = ''     #vCenter to deploy VM
-$Cluster = ''             #vCenter cluster to deploy VM
-$VMTemplate = ''          #vCenter template to deploy VM
-$CustomSpec = ''          #vCenter customization to use for VM
-$Location = ''            #Folderlocation in vCenter for VM
-$DataStore = ''           #Datastore in vCenter to use for VM
-$DiskStorageFormat = ''   #Diskformtat to use (Thin / Thick) for VM
-$NetworkName = ''         #Portgroup to use for VM
+### Parameters ###
+param(
+    [parameter(Mandatory=$True)]
+    [String]$CSVPath
+)
 
-# VM Variables
-$VM_Name = ''
-$VM_Memory = ''                #Memory of VM In GB
-$VM_CPU = ''                   #number of vCPUs of VM
-$VM_DiskCapacity = ''          #Disksize of VM in GB
-
-# Windows Variables
-$Domain = ''                #AD Domain to join
-$IP_Address = ''            #VM IP
-$SubnetLength = ''          #Subnetlength IP address to use (24 means /24 or 255.255.255.0) for VM
-$GW = ''                    #Gateway to use for VM
-$IP_DNS = ''                #IP address DNS server to use
-
+### USER DEFINED VARIABLES ###
 # VMware Tags
 $Category_Name = "Infra-As-Code"
 
-### FUNCTION DEFINITIONS ##############################################################################################
+### FUNCTION DEFINITIONS ###
 Function Update-CustomizationStarted([string] $VM)
 {
     Write-Host "Verifying that Customization for VM $VM has started"
@@ -56,7 +40,6 @@ Function Update-CustomizationStarted([string] $VM)
     Write-Warning "Customization for VM $VM has failed"
     return $false
 }
-
 Function Update-CustomizatonFinished([string] $VM)
 {
     Write-Host  "Verifying that Customization for VM $VM has finished" 
@@ -84,7 +67,6 @@ Function Update-CustomizatonFinished([string] $VM)
         $i--
 	}
 }
-
 Function Restart-VM([string] $VM)
 {
     Restart-VMGuest -VM $VM -Confirm:$false | Out-Null
@@ -93,8 +75,7 @@ Function Restart-VM([string] $VM)
     Wait-Tools -VM $VM -TimeoutSeconds 300 | Out-Null
     Start-Sleep -Seconds 10
 }
-
-function Add-Script([string] $script,$parameters=@(),[bool] $reboot=$false){
+Function Add-Script([string] $script,$parameters=@(),[bool] $reboot=$false){
     $i=1
     foreach ($parameter in $parameters)
     {
@@ -104,33 +85,57 @@ function Add-Script([string] $script,$parameters=@(),[bool] $reboot=$false){
     }
     $script:scripts += ,@($script,$reboot)
 }
-
 Function Test-IP([string] $IP)
 {
   if (-not ($IP) -or (([bool]($IP -as [IPADDRESS])))) { return $true} else {return $false}
 }
 Function New-VMwareTags {
-    New-TagCategory -Name $Category_Name
-    $CSV_Unique_Tag_Name = $CSV | Sort Tag_Name -Unique
-    $Tag_Names = @($CSV_Unique_Tag_Name.Tag_Name)
+    If (-not (Get-TagCategory -Name $Category_Name)){
+        New-TagCategory -Name $Category_Name
+    }
+    $Tag_Names = @($CSV.Tag_Name) | Sort -Unique
     ForEach ($Tag_Name in $Tag_Names){
-        New-Tag -Name $Tag_Name -Category $Category_Name
+        If (!(Get-Tag -Name $Tag_Name)){
+            New-Tag -Name $Tag_Name -Category $Category_Name
+        }
     }
 }
 
-#### USER INTERACTIONS ##############################################################################################
+### CSV Checks ###
 Clear-Host
-Write-host "Deploy Windows server" -foregroundcolor red
-$Hostname = Read-Host -Prompt "Hostname"
-If ($Hostname.Length -gt 15) {write-Host -ForegroundColor Red "$Hostname is an invalid hostname"; break}
-$IP = Read-Host -Prompt "IP Address (press ENTER for DHCP)"
-If (-not (Test-IP $IP)) {write-Host -ForegroundColor Red "$IP is an invalid address"; break}
-$JoinDomainYN = Read-Host "Join Domain $Domain (Y/N)"
+Write-host "Checking CSV" -Foregroundcolor Green
+$CSV = Import-CSV -Path $CSVPath
+$VMs = @($CSV)
+ForEach ($VM in $VMs){
+    # Cluster Check
+    if (-not (Get-Cluster -Name $VM.Cluster)) {
+        Write-Host "The" $VM.Cluster "for" $VM.VM_Name "does not exist. Please check for typos." -ForegroundColor Red
+        Pause
+    }
+    # Hostname Check
+    elseif (($VM.VM_Name).Length -gt 15) {
+        Write-Host $VM.VM_Name "is to long. Please limit hostnames/VM names to 15 characters." -ForegroundColor Red
+        Pause
+    }
+    elseif (-not (Get-VM -Name $VM.VM_Name)){
+        Write-Host $VM.VM_Name "already exists." -ForegroundColor Red
+        Pause
+    }
+    # IP/GW/DNS check
+    elseif (-not ((Test-IP $VM.IP_Address) -and (Test-IP $VM.GW) -and (Test-IP $VM.IP_DNS1) -and (Test-IP $VM.IP_DNS2))) {
+        Write-Host $VM.VM_Name "has an invalid IP address." -ForegroundColor Red 
+        Pause
+    }
+    else {
+        Write-Host "CSV is properly Formated" -ForegroundColor Green
+    }
+}
 
-# Create VMware Tags
+### Create VMware Tags ###
 New-VMwareTags
 
-### READ CREDENTIALS ####################################################################################################
+<#
+### READ CREDENTIALS ###
 Get-Content credentials.txt | Foreach-Object{
    $var = $_.Split('=')
    Set-Variable -Name $var[0].trim('" ') -Value $var[1].trim('" ')
@@ -138,45 +143,51 @@ Get-Content credentials.txt | Foreach-Object{
 $VMLocalUser = "$Hostname\$LocalUser"
 $VMLocalPWord = ConvertTo-SecureString -String $LocalPassword -AsPlainText -Force
 $VMLocalCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $VMLocalUser, $VMLocalPWord
+#>
 
-### CONNECT TO VCENTER ##############################################################################################
+### CONNECT TO VCENTER ###
 Get-Module -ListAvailable VMware* | Import-Module | Out-Null
-Connect-VIServer -Server $vCenterServer -User $vCenterUser -Password $vCenterPass -WarningAction SilentlyContinue
+Connect-VIServer -Server $vCenterServer
 $SourceVMTemplate = Get-Template -Name $VMTemplate
 $SourceCustomSpec = Get-OSCustomizationSpec -Name $CustomSpec
 
-### DEFINE POWERSHELL SCRIPTS TO RUN IN VM AFTER DEPLOYMENT ############################################################################################################
-if ($IP) {
-Add-Script "New-NetIPAddress -InterfaceIndex 2 -IPAddress %1 -PrefixLength %2 -DefaultGateway %3" @($IP, $SubnetLength, $GW)
-Add-Script "Set-DnsClientServerAddress -InterfaceIndex 2 -ServerAddresses %1" @($IP_DNS) }
-if ($JoinDomainYN.ToUpper() -eq "Y") {
-Add-Script '$DomainUser = %1;
-            $DomainPWord = ConvertTo-SecureString -String %2 -AsPlainText -Force;
-            $DomainCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $DomainUser, $DomainPWord;
-             Add-Computer -DomainName %3 -Credential $DomainCredential' @("$Domain\$DomainAdmin",$DomainAdminPassword, $Domain) $true }
-Add-Script 'Import-Module NetSecurity; Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -enabled True'
-Add-Script 'Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -name fDenyTSConnections -Value 0;
-            Enable-NetFirewallRule -DisplayGroup "Remote Desktop";
-            Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -name UserAuthentication -Value 0'
-
-### DEPLOY VM ###############################################################################################################################################################
-Write-Host "Deploying Virtual Machine with Name: [$Hostname] using Template: [$SourceVMTemplate] and Customization Specification: [$SourceCustomSpec] on cluster: [$cluster]" 
-New-VM -Name $Hostname -Template $SourceVMTemplate -ResourcePool $cluster -OSCustomizationSpec $SourceCustomSpec -Location $Location -Datastore $Datastore -DiskStorageFormat $DiskStorageFormat | Out-Null
-New-TagAssignment -Entity $Hostname -Tag $Tag_Name
-Get-VM $Hostname | Get-NetworkAdapter | Set-NetworkAdapter -Portgroup $NetworkName -confirm:$false | Out-Null
-Set-VM -VM $Hostname -NumCpu $CPU -MemoryGB $Memory -Confirm:$false | Out-Null
-Get-VM $Hostname | Get-HardDisk | Where-Object {$_.Name -eq "Hard Disk 1"} | Set-HardDisk -CapacityGB $DiskCapacity -Confirm:$false | Out-Null
-
-Write-Host "Virtual Machine $Hostname Deployed. Powering On" 
-Start-VM -VM $Hostname | Out-Null
-
-if (-not (Update-CustomizationStarted $Hostname)) { break }; if (-not (Update-CustomizatonFinished $Hostname)) { break }
-
-foreach ($script in $scripts)
-{
-    Invoke-VMScript -ScriptText $script[0] -VM $Hostname -GuestCredential $VMLocalCredential | Out-Null
-    if ($script[1]) {Restart-VM $Hostname}
+foreach ($VM in $VMs){
+    ### DEFINE POWERSHELL SCRIPTS TO RUN IN VM AFTER DEPLOYMENT ###
+    if ($VM.IP_Address) {
+        Add-Script "New-NetIPAddress -InterfaceIndex 2 -IPAddress %1 -PrefixLength %2 -DefaultGateway %3" @($VM.IP_Address, $VM.SubnetLength, $VM.GW)
+        Add-Script "Set-DnsClientServerAddress -InterfaceIndex 2 -ServerAddresses %1,%2" @($VM.IP_DNS1,$VM.IP_DNS2)
+    }
+    <#
+    if ($JoinDomainYN.ToUpper() -eq "Y") {
+        Add-Script '$DomainUser = %1;
+        $DomainPWord = ConvertTo-SecureString -String %2 -AsPlainText -Force;
+        $DomainCredential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $DomainUser, $DomainPWord;
+        Add-Computer -DomainName %3 -Credential $DomainCredential' @("$Domain\$DomainJoinAdmin",$DomainJoinAdminPassword, $Domain) $true
+    }
+    Add-Script 'Import-Module NetSecurity; Set-NetFirewallRule -DisplayGroup "File and Printer Sharing" -enabled True'
+    Add-Script 'Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -name fDenyTSConnections -Value 0;
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop";
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -name UserAuthentication -Value 0'
+    #>
+    
+    ### DEPLOY VM ###
+    Write-Host "Deploying the following Virtual Machine:"
+    Write-Host "Name:" $VM.VM_Name
+    Write-Host "Template:" $SourceVMTemplate
+    Write-Host "Customization Specification:" $SourceCustomSpec
+    Write-Host "Cluster:" $VM.Cluster
+    New-VM -Name $VM.VM_Name -Template $SourceVMTemplate -ResourcePool $VM.Cluster -OSCustomizationSpec $SourceCustomSpec -Location $VM.Location -Datastore $VM.Datastore -DiskStorageFormat $VM.DiskStorageFormat | Out-Null
+    New-TagAssignment -Entity $VM.VM_Name -Tag $VM.Tag_Name
+    Get-VM -Name $VM.VM_Name | Get-NetworkAdapter | Set-NetworkAdapter -Portgroup $VM.NetworkName -confirm:$false | Out-Null
+    Set-VM -Name $VM.VM_Name -NumCpu $VM.CPU -MemoryGB $VM.Memory -Confirm:$false | Out-Null
+    Get-VM -Name $VM.VM_Name | Get-HardDisk | Where-Object {$_.Name -eq "Hard Disk 1"} | Set-HardDisk -CapacityGB $VM.DiskCapacity -Confirm:$false | Out-Null
+    Write-Host "Virtual Machine" $VM.VM_Name "deployed. Powering On" 
+    Start-VM -VM $VM.VM_Name | Out-Null
+    if (-not (Update-CustomizationStarted $VM.VM_Name)) { break }; if (-not (Update-CustomizatonFinished $VM.VM_Name)) { break }
+    foreach ($script in $scripts) {
+        Invoke-VMScript -ScriptText $script[0] -VM $VM.VM_Name -GuestCredential $VMLocalCredential | Out-Null
+        if ($script[1]) {Restart-VM $VM.VM_Name}
+    }
+    ### End of Script ###
+    Write-Host "Deployment of VM" $VM.VM_Name "finished" 
 }
-
-### End of Script ##############################
-Write-Host "Deployment of VM $Hostname finished" 
