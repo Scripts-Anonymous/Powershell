@@ -112,7 +112,7 @@ ForEach ($VM in $VMs){
         Write-Host "The" $VM.Cluster "for" $VM.VM_Name "does not exist. Please check for typos." -ForegroundColor Red
         Pause
     }
-    # Hostname Check
+    # Hostname Checks
     elseif (($VM.VM_Name).Length -gt 15) {
         Write-Host $VM.VM_Name "is to long. Please limit hostnames/VM names to 15 characters." -ForegroundColor Red
         Pause
