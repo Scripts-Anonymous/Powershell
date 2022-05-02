@@ -1,34 +1,28 @@
 <# Percent-Migrated
     Author: 
     Jeff Allen
-    im@jeffreyallen.tech
+    https://github.com/Scripts-Anonymous/Powershell/tree/main/AD
 #>
 <#
-    .SYNOPSIS
-    Gets the percentage of computer objects that have been migrated from a warfare centers legacy domain to NREN.
+.SYNOPSIS
+    Gets the percentage of computer objects that have been migrated from a legacy domain to the new domain.
 
-    .DESCRIPTION
-    Script was original written by Joseph Mitchell (jomit@microsoft.com). I heavily modified it to fit NREN.
+.DESCRIPTION
+    Script was original written by a Microsoft Employee. I heavily modified it to fit our domain. If checking migration status of more than one domain, you will need to modify the "DomainTable" to add additional domains.
 
-    .PARAMETERS
+.PARAMETER Output
     -Output <string>
         Required?                    True
 
-    -WCShortCode <string>
+.PARAMETER LegacyDomain
+    -LegacyDomain <string>
         Required?                    True
 
-    .OUTPUTS
-    Will output a .txt file with the name of the site you're checking the migration status on.
+.OUTPUTS
+    Will output a .txt file with the name of the domain you're checking the migration status on.
 
-    .EXAMPLE
-    PS> .\Pecent-Migrated.ps1 -Output C:\adm\ -WCShortCode CA
-    Will check on Cranes migration.
-
-    .EXAMPLE
-    PS> .\Pecent-Migrated.ps1 -Output C:\adm\ -WCShortCode IH
-    Will check on Indian Heads migration.
-
-
+.EXAMPLE
+    PS> .\Pecent-Migrated.ps1 -Output C:\adm\ -LegacyDomain
 #>
 
 #Requires -Modules ActiveDirectory
@@ -36,7 +30,7 @@ param(
     [parameter(Mandatory=$True)]
     [String]$Output,
     [parameter(Mandatory=$True)]
-    [String][ValidateSet("WC")]$WCShortCode
+    [String][ValidateSet("LD")]$LegacyDomain
 )
 
 #region Script
@@ -45,9 +39,9 @@ param(
 $DateLong = Get-Date
 $DateShort = Get-Date -Format yyyyMMdd
 $DomainTable=@{
-    'WC'='contoso.com'
+    'LD'='contoso.com'
 }
-$Domain=($DomainTable.$WCShortCode)
+$Domain=($DomainTable.$LegacyDomain)
 $PDC=Get-ADDomainController -Discover -Domain $Domain -Service GlobalCatalog
 [string]$DNAME=($PDC.Hostname)
 Try {
@@ -70,7 +64,7 @@ $DC=($PDC.PrimaryServer)
 $OUTable=@{
     'WC'='OU'
 }
-$OU=($OUTable.$WCShortCode)
+$OU=($OUTable.$LegacyDomain)
 $OUNoSpace=($OU -replace '\s+')
 If(Get-ADOrganizationalUnit -Filter {name -like $OU} -Server $DC){
     Write-Host "$OU Found" -ForegroundColor Green
