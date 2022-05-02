@@ -1,0 +1,1 @@
+Get-ChildItem -Recurse -Filter "*.zip" | Get-ChildItem | Copy-Item -Destination {$_.Directory.Parent.FullName}

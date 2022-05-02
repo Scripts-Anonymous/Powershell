@@ -1,0 +1,1 @@
+get-wmiobject -namespace "root\CIMv2" -Query "select Name,Version FROM CIM_Datafile where (Name= 'C:\\Program Files\\Tumbleweed\\Desktop Validator\\DVService.exe')" -computer *COMPUTER*

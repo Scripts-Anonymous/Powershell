@@ -1,0 +1,3 @@
+Enter-PSSession <<server>>
+net files | Select-String -SimpleMatch "*FILENAME*"
+net files 2617374726 /close

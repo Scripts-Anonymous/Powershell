@@ -1,0 +1,15 @@
+﻿<#
+This finds the files in the $Path directory that are older than (todays date - $dateRange) and deletes them.
+#>
+if ((Test-Path C:\Logs\Powershell) -eq $False){
+	New-Item -Path "C:\Logs\Powershell" -ItemType "Directory" -force | out-null 
+}
+$today=get-date
+$dateRange=30 #Change this, files before this many days ago will be removed
+$threshold=$today.AddDays(-$dateRange)
+$path="C:\Logs\Powershell" #Point to where you want to delete stuff
+$contents=Get-ChildItem -Path $path  | ? {$_.LastWriteTime -lt $threshold}
+
+foreach($file in $contents){
+    Remove-Item $path\$file
+}

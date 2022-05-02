@@ -1,0 +1,45 @@
+<#
+This script is used to create groups for delegated permission. It will create the T0 group and all site T1 groups, nest the T1 groups in the T0 group, nest the t1 user groups in the t1 group, and set the description on all groups.
+#>
+
+#Variables
+$GroupName=(Read-Host "What do you want to name the group?").Trim()
+$GroupDescription=Read-Host "What should the group description be?"
+$ResultsFile=Read-Host "Where would you like to output the groups created? (The default location is C:\adm\yyyymmdd-CreateGroups.txt)"
+$Date=Get-Date -Format "yyyymmdd"
+
+#Default Script Output Location
+if (
+	[string]::IsNullOrWhiteSpace($ResultsFile)
+)
+{
+	$ResultsFile="C:\adm\$Date-CreateGroups.txt"
+}
+
+# Create Group based on name input
+$T0="*PREFIX*"
+New-ADGroup -Name "*GROUPNAME*" - GroupCategory Security -GroupScope Global -DisplayName "*GROUPNAME*" -Path "*OU*" -Description "$GroupDescription" | Out-File $ResultFile -Append
+
+# Create group for NR
+$T1="*PREFIX*"
+New-ADGroup -Name "$T1-G-T1-$GroupName" - GroupCategory Security -GroupScope Global -DisplayName "$T1-G-T1-$GroupName" -Path | Out-File $ResultFile -Append"*OU*" -Description "$GroupDescription" | Out-File $ResultFile -Append
+New-ADGroup -Name "$T1-U-T1-$GroupName" - GroupCategory Security -GroupScope Global -DisplayName "$T1-U-T1-$GroupName" -Path "*OU*" -Description "$GroupDescription" | Out-File $ResultFile -Append
+Add-ADGroupMember -Identity "$T0-G-$GroupName" -Member "$SiteCode-G-T1-$GroupName" | Out-File $ResultFile -Append
+Add-ADGroupMember -Identity "$T1-G-T1-$GroupName" -Member "$SiteCode-U-T1-$GroupName" | Out-File $ResultFile -Append
+
+# Site T1 Group creation and nesting
+foreach ($Site in $SiteTable.Keys){
+	$GroupPath="*OU*
+	$SiteCode=$SiteTable[$Site]
+	New-ADGroup -Name "$SiteCode-G-T1-$GroupName" - GroupCategory Security -GroupScope Global -DisplayName "$SiteCode-G-T1-$GroupName" -Path $GroupPath -Description "*DESCRIPTION*" | Out-File $ResultFile -Append
+	Add-ADGroupMember -Identity "WC-G-$GroupName" -Member "$SiteCode-G-T1-$GroupName" | Out-File $ResultFile -Append
+}
+
+#WC Site T1 User Group creation and nesting
+foreach ($Site in $SiteTable.Keys){
+	$GroupPath="*OU*
+	$SiteCode=$SiteTable[$Site]
+	New-ADGroup -Name "$SiteCode-U-T1-$GroupName" - GroupCategory Security -GroupScope Global -DisplayName "$SiteCode-U-T1-$GroupName" -Path $GroupPath -Description "*DESCRIPTION*" | Out-File $ResultFile -Append
+	Add-ADGroupMember -Identity "$SiteCode-G-T1-$GroupName" -Member "$SiteCode-U-T1-$GroupName" | Out-File $ResultFile -Append
+}
+

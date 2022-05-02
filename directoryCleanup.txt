@@ -1,0 +1,12 @@
+﻿<#
+This finds the files in the $Path directory that are older than (todays date - $dateRange) and deletes them.
+#>
+$today=get-date
+$dateRange=7 #Change this, files before this many days ago will be removed
+$threshold=$today.AddDays(-$dateRange)
+$path="*PATH*" #Point to where you want to delete stuff
+$contents=Get-ChildItem -Path $path  | ? {$_.LastWriteTime -lt $threshold}
+
+foreach($file in $contents){
+    Remove-Item $path\$file
+}
