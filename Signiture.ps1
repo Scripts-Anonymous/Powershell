@@ -6,9 +6,6 @@
     
 
     .SYNOPSIS
-    
-
-    .SYNTAX
 
 
     .DESCRIPTION
@@ -25,9 +22,9 @@
 
 
     .EXAMPLE
-    PS> .\
+    PS> 
 
     .EXAMPLE
-    PS> .\
+    PS> 
 
 #>
