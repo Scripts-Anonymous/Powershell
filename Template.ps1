@@ -1,11 +1,14 @@
 <#
     .NAME
-
+    Set-Logging
 
     .AUTHOR
-    
+    Jeff Allen
 
     .SYNOPSIS
+    
+
+    .SYNTAX
 
 
     .DESCRIPTION
@@ -22,18 +25,21 @@
 
 
     .EXAMPLE
-    PS> 
+    PS> .\
 
     .EXAMPLE
-    PS> 
+    PS> .\
 
 #>
+
 
 #Requires Powershell 5
 
 function FunctionName {
     param (
-        OptionalParameters
+        [parameter(Mandatory=$False)]
+        [ValidateSet("")]
+        [String]$Default
     )
     
 }
