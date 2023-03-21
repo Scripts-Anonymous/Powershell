@@ -32,19 +32,19 @@ $UsableSpace = 0.99
 $UseUnspecifiedDriveIsHDD = "Yes"
 
 #List all disks that can be pooled and output in table format (format-table)
-Get-PhysicalDisk -CanPool $True | ft FriendlyName, OperationalStatus, Size, MediaType
+Get-PhysicalDisk -CanPool $True | Format-Table FriendlyName, OperationalStatus, Size, MediaType
 
 #Store all physical disks that can be pooled into a variable, $PhysicalDisks
 #    This assumes you want all raw / unpartitioned disks to end up in your pool - 
 #    Add a clause like the example with your drive name to stop that drive from being included
 #    Example  " | Where FriendlyName -NE "ATA LITEONIT LCS-256"
 if ($UseUnspecifiedDriveIsHDD -ne $null){
-    $DisksToChange = (Get-PhysicalDisk -CanPool $True | where MediaType -eq Unspecified)
-    Get-PhysicalDisk -CanPool $True | where MediaType -eq Unspecified | Set-PhysicalDisk -MediaType HDD
+    #$DisksToChange = (Get-PhysicalDisk -CanPool $True | where MediaType -eq Unspecified)
+    Get-PhysicalDisk -CanPool $True | Where-Object MediaType -eq Unspecified | Set-PhysicalDisk -MediaType HDD
     # show the type changed
-    Get-PhysicalDisk -CanPool $True | ft FriendlyName, OperationalStatus, Size, MediaType
+    Get-PhysicalDisk -CanPool $True | Format-Table FriendlyName, OperationalStatus, Size, MediaType
 }
-$PhysicalDisks = (Get-PhysicalDisk -CanPool $True | Where MediaType -NE UnSpecified)
+$PhysicalDisks = (Get-PhysicalDisk -CanPool $True | Where-Object MediaType -NE UnSpecified)
 if ($PhysicalDisks -eq $null){
     throw "Abort! No physical Disks available"
 }       
@@ -53,7 +53,7 @@ if ($PhysicalDisks -eq $null){
 $SubSysName = (Get-StorageSubSystem).FriendlyName
 New-StoragePool -PhysicalDisks $PhysicalDisks -StorageSubSystemFriendlyName $SubSysName -FriendlyName $StoragePoolName
 #View the disks in the Storage Pool just created
-Get-StoragePool -FriendlyName $StoragePoolName | Get-PhysicalDisk | Select FriendlyName, MediaType
+Get-StoragePool -FriendlyName $StoragePoolName | Get-PhysicalDisk | Select-Object FriendlyName, MediaType
 
 #Set the number of columns used for each resiliency - This setting assumes you have at least 2-SSD and 2-HDD
 # Get-StoragePool $StoragePoolName | Set-ResiliencySetting -Name Simple -NumberOfColumnsDefault 2
