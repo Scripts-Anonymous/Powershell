@@ -22,7 +22,7 @@
 
 #>
 
-#Requires -Version 5
+#Requires -Version 5+
 
 function Set-Logging {
     param (
@@ -39,25 +39,50 @@ function Set-Logging {
     $TranscriptEnvName = "Transcripts"
     $TranscriptPath = "C:\Scripts\Transcripts"
 
-    Switch ($Option) {
-        "LogOnly"    {
-            New-Item -Path Env: -Name $LogEnvName -Value $LogPath
-        }        
-        "ReportOnly"    {
-            New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
-        }
-        "TranscriptOnly"  {
-            New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
-        }
-        Default {
-            New-Item -Path Env: -Name $LogEnvName -Value $LogPath
-            New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
-            New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
-        }
-        "RemoveAll"    {
-            Remove-Item Env:$LogEnvName
-            Remove-Item Env:$ReportEnvName
-            Remove-Item Env:$TranscriptEnvName
-        }
+    # OS Picker
+    Switch ($PSversionTable) {
+        {$_.OS -like "Darwin*"} {Switch ($Option) {
+            "LogOnly"    {
+                defaults write com.logging Logs -path "/var/log/logging/"
+            }        
+            "ReportOnly"    {
+                New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
+            }
+            "TranscriptOnly"  {
+                New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
+            }
+            Default {
+                New-Item -Path Env: -Name $LogEnvName -Value $LogPath
+                New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
+                New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
+            }
+            "RemoveAll"    {
+                Remove-Item Env:$LogEnvName
+                Remove-Item Env:$ReportEnvName
+                Remove-Item Env:$TranscriptEnvName
+            }
+        }}
+        {$_.OS -like "Windows*"} {Switch ($Option) {
+            "LogOnly"    {
+                New-Item -Path Env: -Name $LogEnvName -Value $LogPath
+            }        
+            "ReportOnly"    {
+                New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
+            }
+            "TranscriptOnly"  {
+                New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
+            }
+            Default {
+                New-Item -Path Env: -Name $LogEnvName -Value $LogPath
+                New-Item -Path Env: -Name $ReportEnvName -Value $ReportPath
+                New-Item -Path Env: -Name $TranscriptEnvName -Value $TranscriptPath
+            }
+            "RemoveAll"    {
+                Remove-Item Env:$LogEnvName
+                Remove-Item Env:$ReportEnvName
+                Remove-Item Env:$TranscriptEnvName
+            }
+        }}
+        {$_.OS -like "Linux*"} {Write-Host "This is Linux."}
     }
 }
