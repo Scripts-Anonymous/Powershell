@@ -41,7 +41,7 @@ function Set-Logging {
 
     # OS Picker
     Switch ($PSversionTable) {
-        {$_.OS -like "Darwin*"} {Switch ($Option) {
+        <#{$_.OS -like "Darwin*"} {Switch ($Option) {
             "LogOnly"    {
                 defaults write com.logging Logs -path "/var/log/logging/"
             }        
@@ -61,7 +61,7 @@ function Set-Logging {
                 Remove-Item Env:$ReportEnvName
                 Remove-Item Env:$TranscriptEnvName
             }
-        }}
+        }}#>
         {$_.OS -like "Windows*"} {Switch ($Option) {
             "LogOnly"    {
                 New-Item -Path Env: -Name $LogEnvName -Value $LogPath
@@ -83,6 +83,6 @@ function Set-Logging {
                 Remove-Item Env:$TranscriptEnvName
             }
         }}
-        {$_.OS -like "Linux*"} {Write-Host "This is Linux."}
+        {$_.OS -like "Linux*"} {Write-Host "This is Linux"}
     }
 }
