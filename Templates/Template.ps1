@@ -1,9 +1,9 @@
 <#
     .NAME
-    Set-Logging
+
 
     .AUTHOR
-    Jeff Allen
+
 
     .SYNOPSIS
     
